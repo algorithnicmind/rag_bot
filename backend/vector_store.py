@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-index_name = "rag-bot-index-v2"
+index_name = "rag-bot-index-v3"
 
 def get_vector_store():
     pinecone_api_key = os.getenv("PINECONE_API_KEY")
@@ -21,7 +21,7 @@ def get_vector_store():
 
     # Set up Gemini Embeddings
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/text-embedding-004", 
+        model="models/gemini-embedding-001", 
         google_api_key=gemini_api_key
     )
     
@@ -29,7 +29,7 @@ def get_vector_store():
     if index_name not in pc.list_indexes().names():
         pc.create_index(
             name=index_name,
-            dimension=768, # Gemini embeddings dimension is 768
+            dimension=3072, # gemini-embedding-001 produces 3072-dim vectors
             metric="cosine",
             spec=ServerlessSpec(
                 cloud="aws",

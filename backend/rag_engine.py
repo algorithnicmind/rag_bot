@@ -20,7 +20,7 @@ def generate_rag_response(query: str, user_id: int):
     # 2. Prepare the Google Gemini LLM
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-pro", # You can use gemini-1.5-flash for speed
+        model="gemini-2.0-flash", # Fast and capable model
         temperature=0.3, # Low temperature for accurate, non-hallucinated answers
         max_retries=2,
         google_api_key=gemini_api_key

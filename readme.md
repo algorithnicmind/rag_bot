@@ -1,126 +1,188 @@
 <div align="center">
-  <h1 align="center">RAG Bot - Internal Docs Q&A Agent</h1>
 
-  <p align="center">
-    A full-stack AI-powered application for securely chatting with your documents!
-    <br />
-    <a href="#features"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="#getting-started">Getting Started</a>
-    ·
-    <a href="#api-endpoints">API Endpoints</a>
-    ·
-    <a href="#built-with">Tech Stack</a>
-  </p>
-</div>
+# 🤖 RAG Bot
 
-<br />
+### _Your Personal AI Document Assistant_
 
-> [!NOTE]
-> This project implements a Retrieval-Augmented Generation (RAG) architecture to provide accurate, context-aware answers to user queries based on uploaded documents.
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.134-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Vite](https://img.shields.io/badge/Vite-6.2-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev)
+[![LangChain](https://img.shields.io/badge/LangChain-0.2-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain.com)
+[![Pinecone](https://img.shields.io/badge/Pinecone-Vector_DB-000000?style=for-the-badge)](https://pinecone.io)
+[![Gemini](https://img.shields.io/badge/Google_Gemini-AI-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev)
 
-## 🚀 About The Project
+**Upload your documents • Ask questions • Get AI-powered answers with source citations**
 
-**RAG Bot** allows users to securely upload documents (PDF, DOCX, TXT) and interactively chat with them. By leveraging vector embeddings and a modern Chat UI, it provides precise answers extracted directly from your internal documents.
-
-### ✨ Features
-
-- **Authentication System**: Secure user registration and login with JWT access tokens.
-- **Document Management**: Upload and manage your personal documents securely.
-- **RAG Engine**: Extracts text from documents, generates vector embeddings, and stores them in a highly-optimized Vector Database (Pinecone).
-- **Interactive Chat Interface**: Ask natural language questions and receive AI-generated answers with source tracking.
-- **Modern UI**: A visually pleasing and responsive React interface.
-
-### 🛠️ Built With
-
-- [![React][React.js]][React-url]
-- [![FastAPI][FastAPI]][FastAPI-url]
-- [![Vite][Vite]][Vite-url]
-- [![Python][Python]][Python-url]
+[Getting Started](#-getting-started) · [Features](#-features) · [Architecture](#-architecture) · [API Reference](#-api-endpoints) · [Documentation](#-documentation)
 
 ---
 
-## 🚦 Getting Started
+</div>
 
-Follow these instructions to get a local copy up and running.
+## 📖 About
+
+**RAG Bot** is a full-stack web application that implements **Retrieval-Augmented Generation (RAG)** to let users securely upload documents and have intelligent conversations about their content. The AI answers _**only**_ from your documents — no hallucinations, no made-up facts.
+
+Upload a PDF, Word document, or text file, and then ask questions like:
+
+- _"Summarize the key points of this report"_
+- _"What does section 3 say about the budget?"_
+- _"Compare the findings from these two documents"_
+
+---
+
+## ✨ Features
+
+<table>
+<tr>
+<td width="50%">
+
+### 🔐 Secure Authentication
+
+- JWT-based registration & login
+- bcrypt password hashing
+- Token-protected API endpoints
+
+### 📄 Smart Document Processing
+
+- **PDF** support (via PyPDF)
+- **Word .docx** support (via python-docx)
+- **Plain text .txt** support
+- Automatic text extraction & chunking
+
+</td>
+<td width="50%">
+
+### 🧠 RAG-Powered AI Chat
+
+- Powered by Google Gemini 2.0 Flash
+- Context-aware answers from YOUR docs only
+- Source citations with every response
+- Markdown-rendered AI responses
+
+### 🔒 Data Isolation
+
+- User-scoped vector storage
+- Each user can only query their own documents
+- Metadata filtering ensures zero data leakage
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🏗 Architecture
+
+```
+┌─────────────────┐       ┌─────────────────────────┐
+│  React Frontend │ HTTP  │    FastAPI Backend       │
+│  (Vite :5173)   │◄─────►│    (Uvicorn :8000)      │
+│                 │ REST  │                         │
+│  Login/Register │       │  Auth · Upload · Chat   │
+│  Upload Docs    │       │  Document Processing    │
+│  AI Chat UI     │       │  RAG Engine (LangChain) │
+└─────────────────┘       └────┬──────────┬─────────┘
+                               │          │
+                          ┌────▼───┐  ┌───▼───────────┐
+                          │ SQLite │  │ Pinecone Cloud │
+                          │ Users  │  │ Vectors (3072d)│
+                          │ Docs   │  │ User-scoped    │
+                          └────────┘  └───┬───────────┘
+                                          │
+                                    ┌─────▼──────────┐
+                                    │ Google Gemini   │
+                                    │ Embedding + LLM │
+                                    └────────────────┘
+```
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
-Ensure you have the following installed on your machine:
+| Tool    | Version Required |
+| ------- | ---------------- |
+| Python  | 3.10+            |
+| Node.js | 20.19+ or 22.12+ |
 
-- **Node.js** (v18+)
-- **Python** (3.9+)
+### 1️⃣ Clone the Repository
 
-### Installation
+```bash
+git clone https://github.com/your-username/rag_bot.git
+cd rag_bot
+```
 
-1. **Clone the repository**
-   ```sh
-   git clone https://github.com/your_username/rag_bot.git
-   cd rag_bot
-   ```
+### 2️⃣ Backend Setup
 
 <details>
-<summary><strong>2. 🐍 Backend Setup (FastAPI)</strong></summary>
-<br />
+<summary><strong>🐍 Click to expand Backend instructions</strong></summary>
+<br>
 
-Navigate to the backend directory and set up the Python environment:
-
-```sh
+```bash
 cd backend
 python -m venv venv
 ```
 
-**Activate the virtual environment:**
+**Activate virtual environment:**
 
-- On Windows:
-  ```sh
-  venv\Scripts\activate
-  ```
-- On macOS/Linux:
-  ```sh
-  source venv/bin/activate
-  ```
+```bash
+# Windows
+venv\Scripts\activate
+
+# macOS/Linux
+source venv/bin/activate
+```
 
 **Install dependencies:**
 
-```sh
+```bash
 pip install -r requirements.txt
 ```
 
 > [!IMPORTANT]
-> You must create a `.env` file in the `backend` directory.
+> Create a `.env` file in the `backend/` directory with your API keys:
 
-Add your environment variables to the `.env` file:
-
-```ini
-PINECONE_API_KEY=your_pinecone_api_key
-OPENAI_API_KEY=your_openai_api_key
-SECRET_KEY=your_jwt_secret_key
+```env
+GEMINI_API_KEY="your-gemini-api-key"
+PINECONE_API_KEY="your-pinecone-api-key"
+SECRET_KEY="any-random-secret-string"
 ```
 
-**Run the FastAPI server:**
+| Key                | Where to get it                                        |
+| ------------------ | ------------------------------------------------------ |
+| `GEMINI_API_KEY`   | [Google AI Studio](https://aistudio.google.com/apikey) |
+| `PINECONE_API_KEY` | [Pinecone Console](https://app.pinecone.io)            |
 
-```sh
-uvicorn main:app --reload
+**Start the server:**
+
+```bash
+python -m uvicorn main:app --reload
 ```
+
+> [!TIP]
+> Visit `http://127.0.0.1:8000/docs` for interactive Swagger API documentation.
 
 </details>
 
+### 3️⃣ Frontend Setup
+
 <details>
-<summary><strong>3. ⚛️ Frontend Setup (React/Vite)</strong></summary>
-<br />
+<summary><strong>⚛️ Click to expand Frontend instructions</strong></summary>
+<br>
 
-Open a new terminal, navigate to the frontend directory:
+Open a **new terminal** (keep the backend running):
 
-```sh
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
 > [!TIP]
-> The frontend application will run on `http://localhost:5173` by default.
+> The app will be available at `http://localhost:5173`
 
 </details>
 
@@ -128,42 +190,104 @@ npm run dev
 
 ## 📡 API Endpoints
 
-The FastAPI backend exposes the following key endpoints:
+| Method | Endpoint            | Auth | Description                                       |
+| :----: | ------------------- | :--: | ------------------------------------------------- |
+| `POST` | `/auth/register`    |  ❌  | Register a new user account                       |
+| `POST` | `/auth/login`       |  ❌  | Login and receive JWT token                       |
+| `GET`  | `/users/me`         |  🔐  | Get current user profile                          |
+| `POST` | `/documents/upload` |  🔐  | Upload & vectorize a document (.pdf, .docx, .txt) |
+| `GET`  | `/documents`        |  🔐  | List all uploaded documents                       |
+| `POST` | `/chat`             |  🔐  | Ask a question about your documents               |
 
-| Method | Endpoint            | Description                                                   |
-| ------ | ------------------- | ------------------------------------------------------------- |
-| `POST` | `/auth/register`    | Register a new user                                           |
-| `POST` | `/auth/login`       | Login to retrieve JWT Access Token                            |
-| `GET`  | `/users/me`         | Fetch detailed info of logged-in user                         |
-| `POST` | `/documents/upload` | Upload and vectorize a new document (`.pdf`, `.docx`, `.txt`) |
-| `GET`  | `/documents`        | Retrieve all documents uploaded by the user                   |
-| `POST` | `/chat`             | Chat with the RAG engine based on uploaded documents          |
+---
 
-> [!TIP]
-> Once the backend server is running, visit `http://127.0.0.1:8000/docs` to view the interactive **Swagger UI** for testing API endpoints.
+## 📁 Project Structure
+
+```
+rag_bot/
+├── backend/
+│   ├── main.py                # FastAPI app & routes
+│   ├── auth.py                # JWT authentication logic
+│   ├── models.py              # SQLAlchemy database models
+│   ├── schemas.py             # Pydantic request/response schemas
+│   ├── database.py            # SQLite connection setup
+│   ├── document_processor.py  # PDF/DOCX/TXT text extraction
+│   ├── vector_store.py        # Pinecone + Gemini embeddings
+│   ├── rag_engine.py          # LangChain RAG pipeline
+│   ├── requirements.txt       # Python dependencies
+│   └── .env                   # API keys (not committed)
+│
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx            # Root component & routing
+│   │   ├── index.css          # Global dark theme styles
+│   │   └── components/
+│   │       ├── Login.jsx      # Auth forms
+│   │       ├── Upload.jsx     # Document upload UI
+│   │       └── Chat.jsx       # AI chat interface
+│   └── package.json
+│
+├── docs/                      # Detailed documentation
+│   ├── project_plan.md
+│   ├── architecture.md
+│   ├── api_reference.md
+│   ├── frontend_guide.md
+│   ├── database_schema.md
+│   ├── security.md
+│   └── setup_guide.md
+│
+├── .gitignore
+└── README.md
+```
+
+---
+
+## 📚 Documentation
+
+Detailed documentation is available in the [`docs/`](./docs) folder:
+
+| Document                                     | Description                                           |
+| -------------------------------------------- | ----------------------------------------------------- |
+| [Project Plan](./docs/project_plan.md)       | Overview, tech stack, and implementation timeline     |
+| [Architecture](./docs/architecture.md)       | System design, data flows, and design decisions       |
+| [API Reference](./docs/api_reference.md)     | Complete REST API documentation with examples         |
+| [Frontend Guide](./docs/frontend_guide.md)   | React components, routing, and design system          |
+| [Database Schema](./docs/database_schema.md) | SQLite models and Pinecone vector structure           |
+| [Security](./docs/security.md)               | Authentication, data isolation, and secret management |
+| [Setup Guide](./docs/setup_guide.md)         | Installation, configuration, and troubleshooting      |
 
 ---
 
 ## 🔒 Security
 
 > [!CAUTION]
-> Never commit your `.env` file containing API keys to GitHub. Ensure `.env` is listed in your `.gitignore`.
+> Never commit your `.env` file to GitHub. It is already excluded via `.gitignore`.
 
-This project implements robust token-based authentication to ensure users can only query information from documents they have personally uploaded.
+- **Passwords** are hashed with bcrypt — never stored in plaintext
+- **JWT tokens** expire after 30 minutes
+- **Document vectors** are user-scoped — users can only query their own data
+- **API keys** are stored server-side only, never exposed to the frontend
+
+---
+
+## 🛠 Tech Stack
+
+| Category          | Technology                                        |
+| ----------------- | ------------------------------------------------- |
+| **Frontend**      | React 19, Vite, React Router, Axios, Lucide Icons |
+| **Backend**       | Python, FastAPI, Uvicorn, SQLAlchemy              |
+| **AI/ML**         | Google Gemini 2.0 Flash, Gemini Embedding 001     |
+| **Vector DB**     | Pinecone (Serverless)                             |
+| **Database**      | SQLite                                            |
+| **Auth**          | JWT (python-jose), bcrypt (passlib)               |
+| **RAG Framework** | LangChain                                         |
 
 ---
 
 <div align="center">
-  <p>Built with ❤️</p>
+
+**Built with ❤️ using RAG Architecture**
+
+_Upload. Ask. Discover._
+
 </div>
-
-<!-- Markdowns & Links -->
-
-[React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
-[React-url]: https://reactjs.org/
-[FastAPI]: https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi
-[FastAPI-url]: https://fastapi.tiangolo.com/
-[Vite]: https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white
-[Vite-url]: https://vitejs.dev/
-[Python]: https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54
-[Python-url]: https://www.python.org/

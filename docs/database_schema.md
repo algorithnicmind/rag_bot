@@ -1,64 +1,89 @@
 # Database Schema
 
-The RAG Bot relies on two distinct databases for operation.
+## 1. Local SQLite Database
 
-1.  **Local Relational Database**: SQLite via SQLAlchemy. It manages primary entities like Users and document metadata.
-2.  **Vector Database**: Pinecone (via `pinecone-client`). It holds high-dimensional embeddings for similarity search.
+The application uses SQLite via SQLAlchemy ORM. The database file `ragbot.db` is auto-created on first server startup.
+
+### Users Table
+
+```sql
+CREATE TABLE users (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    username VARCHAR UNIQUE NOT NULL,
+    email    VARCHAR UNIQUE NOT NULL,
+    hashed_password VARCHAR NOT NULL
+);
+```
+
+| Column            | Type            | Description                                                        |
+| ----------------- | --------------- | ------------------------------------------------------------------ |
+| `id`              | Integer (PK)    | Auto-incrementing user ID. Used as `user_id` in Pinecone metadata. |
+| `username`        | String (Unique) | Login identifier. Must be unique.                                  |
+| `email`           | String (Unique) | Email address. Must be unique.                                     |
+| `hashed_password` | String          | bcrypt-hashed password. Never stored in plaintext.                 |
+
+### Documents Table
+
+```sql
+CREATE TABLE documents (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL,
+    filename    VARCHAR NOT NULL,
+    upload_date VARCHAR NOT NULL
+);
+```
+
+| Column        | Type         | Description                                                     |
+| ------------- | ------------ | --------------------------------------------------------------- |
+| `id`          | Integer (PK) | Auto-incrementing document ID.                                  |
+| `user_id`     | Integer      | References `users.id`. Associates document with uploading user. |
+| `filename`    | String       | Original filename preserved as uploaded.                        |
+| `upload_date` | String       | Timestamp in `YYYY-MM-DD HH:MM:SS` format.                      |
 
 ---
 
-## 1. Local SQLite Models
+## 2. Pinecone Vector Database
 
-The local application state is defined inside `backend/models.py`.
+**Index Name**: `rag-bot-index-v3`  
+**Dimension**: `3072` (matches `gemini-embedding-001` output)  
+**Metric**: Cosine Similarity  
+**Cloud**: AWS `us-east-1` (Serverless)
 
-### User Model Actions
+### Vector Record Structure
 
-```python
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-```
-
-- `id`: Auto-incrementing primary key. It serves as the unique identifier for `user_id` inside Pinecone metadata filters.
-- `username` & `email`: Uniquely identifying attributes ensuring no collision during `/auth/register`.
-- `hashed_password`: Handled by `passlib` context (`bcrypt`), securely validating against user payloads during `/auth/login`.
-
-### Document Model Actions
-
-```python
-class Document(Base):
-    __tablename__ = "documents"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)
-    filename = Column(String, index=True)
-    upload_date = Column(String)
-```
-
-- `user_id`: Foreign key equivalent pointing back to the `User.id` attempting to log a document upload.
-- `filename`: A reference corresponding exactly to the name preserved in the physical `/uploads` folder.
-
----
-
-## 2. Vector Database Storage Schema (Pinecone)
-
-The `pinecone` client creates vector entries shaped around extracted chunks of a document. It utilizes an embedding dimension dictated by the underlying LLM choice.
-
-```text
-Pinecone Record Component:
+```json
 {
-    id: "chunk-uuid",         # A globally unique string ID
-    values: [0.32, -0.1, ...], # The 768 or 1536 float array (vector representation)
-    metadata: {
-        text: "The literal text extracted from the document that was embedded.",
-        user_id: 1,           # Linking the chunk back to the SQLite User.id
-        filename: "HR-Policies.pdf"
+    "id": "auto-generated-uuid",
+    "values": [0.032, -0.015, 0.089, ...],  // 3072 floats
+    "metadata": {
+        "text": "The actual text chunk from the document...",
+        "user_id": 1,
+        "filename": "company-policy.pdf",
+        "chunk_index": 0
     }
 }
 ```
 
-This strict metadata schema provides the magic behind secure retrieval. Since `user_id` is assigned at the chunk level during `process_and_store_text()`, similarity searches can be passed a filter parameter dictating that Pinecone _only_ searches records whose `user_id` matches the active JWT session user.
+### Metadata Fields
+
+| Field         | Type    | Purpose                                                                   |
+| ------------- | ------- | ------------------------------------------------------------------------- |
+| `text`        | string  | The literal text chunk that was embedded. Returned as context to the LLM. |
+| `user_id`     | integer | Links chunk to the user who uploaded it. **Critical for data isolation.** |
+| `filename`    | string  | Original filename. Shown as "Source" in chat responses.                   |
+| `chunk_index` | integer | Position of this chunk within the document.                               |
+
+### How Data Isolation Works
+
+When querying Pinecone, a metadata filter is always applied:
+
+```python
+retriever = vectorstore.as_retriever(
+    search_kwargs={
+        "k": 5,
+        "filter": {"user_id": current_user.id}  # ← This is the key
+    }
+)
+```
+
+This means **User A can never see, retrieve, or chat about User B's documents**, even if they upload identical files.

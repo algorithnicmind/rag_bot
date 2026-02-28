@@ -1,81 +1,172 @@
 # API Reference
 
-The FastAPI backend runs on `http://127.0.0.1:8000/` and provides a set of RESTful endpoints.
+The FastAPI backend exposes a RESTful API at `http://127.0.0.1:8000`.
 
-## Base URL
-
-`/` : Returns `{"Hello": "Welcome to RAG Bot API"}`
+> **Interactive Docs**: Visit `http://127.0.0.1:8000/docs` for Swagger UI when the server is running.
 
 ---
 
-## Authentication Endpoints
+## Authentication
 
-### 1. Register User
+### Register User
 
-`POST /auth/register`
+```
+POST /auth/register
+```
 
-- **Request Body**:
-  - `username` (str): Unique identifier.
-  - `email` (str): Unique email address.
-  - `password` (str): Secret plaintext password (hashed on server).
-- **Response**: `200 OK`
-  - Returns the created user object (excluding the password).
+| Parameter  | Type   | Location    | Required |
+| ---------- | ------ | ----------- | -------- |
+| `username` | string | body (JSON) | ✅       |
+| `email`    | string | body (JSON) | ✅       |
+| `password` | string | body (JSON) | ✅       |
 
-### 2. Login User
+**Response** `200 OK`:
 
-`POST /auth/login`
+```json
+{
+  "id": 1,
+  "username": "ankit",
+  "email": "ankit@example.com"
+}
+```
 
-- **Request Form-Data** (OAuth2):
-  - `username` (str): Registered username.
-  - `password` (str): Password.
-- **Response**: `200 OK`
-  - `access_token` (str): JWT Token valid for session (usually 30 minutes).
-  - `token_type` (str): "bearer"
-
-### 3. Get Current User (Me)
-
-`GET /users/me`
-
-- **Headers**: `Authorization: Bearer <token>`
-- **Response**: `200 OK`
-  - `id` (int): User ID.
-  - `username` (str): User's username.
+**Errors**: `400` if email or username already exists.
 
 ---
 
-## Document Endpoints
+### Login
 
-### 4. Upload Document
+```
+POST /auth/login
+```
 
-`POST /documents/upload`
+| Parameter  | Type   | Location  | Required |
+| ---------- | ------ | --------- | -------- |
+| `username` | string | form-data | ✅       |
+| `password` | string | form-data | ✅       |
 
-- **Headers**: `Authorization: Bearer <token>`
-- **Request Body (Multipart Form)**:
-  - `file` (File): Only `.pdf`, `.docx`, and `.txt` are accepted.
-- **Response**: `200 OK`
-  - `id` (int): Document ID.
-  - `filename` (str): Original filename.
-  - `upload_date` (str): Timestamp of ingestion.
+**Response** `200 OK`:
 
-### 5. Retrieve User Documents
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer"
+}
+```
 
-`GET /documents`
-
-- **Headers**: `Authorization: Bearer <token>`
-- **Response**: `200 OK`
-  - Returns a list of documents uploaded by the authenticated user.
+**Errors**: `401` if credentials are incorrect.
 
 ---
 
-## Chat Execution
+### Get Current User
 
-### 6. Chat with RAG Engine
+```
+GET /users/me
+Authorization: Bearer <token>
+```
 
-`POST /chat`
+**Response** `200 OK`:
 
-- **Headers**: `Authorization: Bearer <token>`
-- **Request Body**:
-  - `query` (str): The specific question or prompt the user wishes to ask based on their documents.
-- **Response**: `200 OK`
-  - `answer` (str): The AI-generated answer.
-  - `sources` (list of str): Filenames from which the context was drawn.
+```json
+{
+  "id": 1,
+  "username": "ankit",
+  "email": "ankit@example.com"
+}
+```
+
+---
+
+## Documents
+
+### Upload Document
+
+```
+POST /documents/upload
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+```
+
+| Parameter | Type | Location  | Required |
+| --------- | ---- | --------- | -------- |
+| `file`    | File | form-data | ✅       |
+
+**Accepted formats**: `.pdf`, `.docx`, `.txt`
+
+**What happens on upload**:
+
+1. Text is extracted from the file
+2. Text is chunked into ~1000 character segments
+3. Each chunk is embedded using `gemini-embedding-001` (3072 dimensions)
+4. Vectors are stored in Pinecone with `user_id` metadata
+5. File metadata is saved to SQLite
+6. A backup copy is saved to `backend/uploads/`
+
+**Response** `200 OK`:
+
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "filename": "resume.pdf",
+  "upload_date": "2026-02-28 23:00:00"
+}
+```
+
+**Errors**: `400` for invalid file types, `500` for processing or API errors.
+
+---
+
+### List My Documents
+
+```
+GET /documents
+Authorization: Bearer <token>
+```
+
+**Response** `200 OK`:
+
+```json
+[
+  {
+    "id": 1,
+    "user_id": 1,
+    "filename": "resume.pdf",
+    "upload_date": "2026-02-28 23:00:00"
+  }
+]
+```
+
+---
+
+## Chat
+
+### Ask a Question
+
+```
+POST /chat
+Authorization: Bearer <token>
+```
+
+| Parameter | Type   | Location    | Required |
+| --------- | ------ | ----------- | -------- |
+| `query`   | string | body (JSON) | ✅       |
+
+**What happens**:
+
+1. Query is embedded using the same model
+2. Pinecone retrieves top 5 most relevant chunks (filtered by `user_id`)
+3. Chunks are assembled as context for the LLM
+4. `gemini-2.0-flash` generates an answer strictly from the context
+5. Source filenames are extracted and returned
+
+**Response** `200 OK`:
+
+```json
+{
+  "answer": "Based on your documents, the capital of France is Paris...",
+  "sources": ["geography.pdf", "notes.txt"]
+}
+```
+
+**Errors**: `500` if API quota exceeded or processing fails.

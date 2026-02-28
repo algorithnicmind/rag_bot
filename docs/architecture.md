@@ -1,44 +1,75 @@
-# RAG Bot Architecture Overview
+# Architecture Overview
 
 ## 1. High-Level System Architecture
 
-The RAG Bot application implements a standard client-server architecture with Retrieval-Augmented Generation (RAG) capabilities to anchor AI responses to user-provided documents.
+```
+┌──────────────────────┐         ┌──────────────────────────────┐
+│   React Frontend     │  HTTP   │   FastAPI Backend             │
+│   (Vite, Port 5173)  │◄──────►│   (Uvicorn, Port 8000)       │
+│                      │  REST   │                              │
+│  • Login / Register  │         │  • Auth (JWT + bcrypt)       │
+│  • Upload Documents  │         │  • Document Processing       │
+│  • AI Chat Interface │         │  • Vector Store Integration  │
+│                      │         │  • RAG Engine (LangChain)    │
+└──────────────────────┘         └──────┬──────────┬────────────┘
+                                        │          │
+                                        │          │
+                               ┌────────▼──┐  ┌───▼──────────────┐
+                               │  SQLite   │  │  Pinecone Cloud  │
+                               │  (Local)  │  │  (Vector DB)     │
+                               │           │  │                  │
+                               │ • Users   │  │ • Document       │
+                               │ • Docs    │  │   Embeddings     │
+                               │   metadata│  │ • User-scoped    │
+                               └───────────┘  └────────┬─────────┘
+                                                       │
+                                              ┌────────▼─────────┐
+                                              │  Google Gemini   │
+                                              │  API             │
+                                              │                  │
+                                              │ • Embeddings     │
+                                              │   (gemini-       │
+                                              │    embedding-001)│
+                                              │ • LLM Chat       │
+                                              │   (gemini-2.0-   │
+                                              │    flash)         │
+                                              └──────────────────┘
+```
 
-The system consists of the following major components:
+## 2. Document Ingestion Flow
 
-- **Client (Frontend)**: React Single-Page Application (SPA) built with Vite.
-- **Web Server (Backend)**: Python FastAPI application handling HTTP requests, authentication, and processing data.
-- **Relational Database**: Local SQLite (via SQLAlchemy) storing user metadata, document tracking, and chat history.
-- **Vector Database**: Pinecone for storing and retrieving high-dimensional document embeddings.
-- **LLM Provider**: OpenAI (or Google Gemini/Groq depending on usage configuration) for generating final responses.
+When a user uploads a document, the following sequence executes:
 
----
+1. **Upload**: Frontend sends the raw file (PDF, DOCX, TXT) via multipart/form-data to `/documents/upload`.
+2. **Auth Check**: Backend verifies the JWT token and identifies the user.
+3. **Text Extraction**: Raw text is extracted using the appropriate library:
+   - `.pdf` → `PyPDF` (reads all pages)
+   - `.docx` → `python-docx` (reads all paragraphs)
+   - `.txt` → Direct UTF-8 decode
+4. **Chunking**: Text is split into ~1000 character chunks with 200 character overlap using `RecursiveCharacterTextSplitter`.
+5. **Embedding**: Each chunk is converted to a 3072-dimensional vector using `gemini-embedding-001`.
+6. **Vector Storage**: Vectors + metadata (`user_id`, `filename`, `chunk_index`) are upserted to **Pinecone** index `rag-bot-index-v3`.
+7. **Database Record**: Document metadata (filename, timestamp) is saved to SQLite.
+8. **File Backup**: A copy of the original file is saved to `backend/uploads/`.
 
-## 2. Core Functional Flows
+## 3. Query & Retrieval Flow (RAG Process)
 
-### A. Document Ingestion Flow
+1. **User Input**: User submits a natural language question via the Chat UI.
+2. **Query Embedding**: The question is converted to the same 3072-dimensional vector.
+3. **Similarity Search**: Pinecone finds the top 5 most relevant text chunks.
+   - **Critical**: A metadata filter `{"user_id": current_user.id}` ensures users only retrieve **their own** documents.
+4. **Context Assembly**: Retrieved chunks are combined into a Context Window.
+5. **LLM Generation**: The context + question are sent to `gemini-2.0-flash` with a strict system prompt:
+   > "Answer **only** from the provided context. If the answer isn't in the documents, say so."
+6. **Response**: The AI answer + source filenames are returned to the user.
 
-When a user uploads a document, the following sequence occurs:
+## 4. Key Design Decisions
 
-1.  **Upload**: The frontend sends the raw file (PDF, DOCX, TXT) via multipart/form-data to the `/documents/upload` API.
-2.  **Validation**: The backend checks the file extension and verifies JWT authorization.
-3.  **Extraction**: Raw text is extracted using appropriate libraries (`PyPDF2`, `python-docx`).
-4.  **Chunking**: The text is split into smaller, manageable chunks (e.g., 1000 characters with 200 character overlap) to preserve context.
-5.  **Embedding**: Each chunk is passed to an embedding model to generate a numerical vector representation.
-6.  **Storage**:
-    - The vectors and their associated metadata (text chunk, original filename, `user_id`) are pushed to **Pinecone**.
-    - Metadata about the document upload (filename, timestamp) is saved to the **SQLite database**.
-    - A local copy of the file is deposited in the `/uploads` directory.
-
-### B. Query and Retrieval Flow (The RAG process)
-
-1.  **Query Input**: User submits a question through the chat interface.
-2.  **Query Embedding**: The backend converts the user's natural language query into a vector using the _exact same_ embedding model used during document ingestion.
-3.  **Similarity Search (Retrieval)**: The backend queries Pinecone with the vector.
-    - _Security Note_: A metadata filter on `user_id` is applied so users only retrieve chunks from their _own_ documents.
-4.  **Context Assembly**: Pinecone returns the top-K most similar text chunks. By combining these chunks, the backend forms a "Context Window".
-5.  **Generation**: The backend sends a prompt to the LLM (e.g., OpenAI) containing:
-    - The user's original query.
-    - The assembled Context Window.
-    - System instructions to answer _only_ based on the context.
-6.  **Response**: The LLM output is returned to the user, alongside the source materials (filenames) used to form the context.
+| Decision                              | Rationale                                                      |
+| ------------------------------------- | -------------------------------------------------------------- |
+| **Pinecone over local vector stores** | Cloud-hosted, no local memory constraints, serverless scaling  |
+| **User-scoped metadata filtering**    | Absolute data isolation between users without separate indexes |
+| **gemini-embedding-001 (3072-dim)**   | Latest Google embedding model with best retrieval accuracy     |
+| **gemini-2.0-flash**                  | Fast, capable, and generous free-tier limits                   |
+| **LangChain orchestration**           | Standardized RAG pipeline with retriever + chain pattern       |
+| **JWT authentication**                | Stateless, scalable, industry-standard token auth              |

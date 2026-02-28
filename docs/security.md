@@ -1,50 +1,77 @@
-# Application Security
+# Security
 
-The RAG Bot application implements several industry standard security mechanisms to guarantee that user data and company intellectual property (Documents) remain isolated between sessions.
+## 1. Authentication — JWT Tokens
 
-## 1. Authentication (JWT Tokens)
+| Property             | Value                               |
+| -------------------- | ----------------------------------- |
+| **Protocol**         | OAuth2 Password Flow                |
+| **Token Type**       | JSON Web Token (JWT)                |
+| **Algorithm**        | HS256 (symmetric signing)           |
+| **Expiry**           | 30 minutes                          |
+| **Library**          | `python-jose` for encoding/decoding |
+| **Password Hashing** | `passlib` with `bcrypt` scheme      |
 
-- **Protocol**: OAuth2 standard using `PasswordRequestForm`.
-- **Algorithm**: JSON Web Tokens (JWT) using `HS256` symmetric signing.
-- **Dependency**: Relying exclusively on `python-jose` for deterministic token verification and decoding within FastAPI.
+### Flow
 
-### Implementation:
+1. User sends credentials to `POST /auth/login`
+2. Backend verifies password hash using `passlib.bcrypt.verify()`
+3. If valid, a JWT is created with payload `{"sub": username, "exp": timestamp}`
+4. Token is returned to the frontend and stored in `localStorage`
+5. Every subsequent API call includes `Authorization: Bearer <token>` header
+6. Backend decodes token via `Depends(get_current_user)` on every protected endpoint
 
-Users send their username and password via `POST /auth/login`. If `passlib.bcrypt.verify` matches the hashed password saved inside SQLite, the backend responds with an encoded `access_token` bearing the `sub=user.username` payload.
+## 2. Data Isolation — Multi-Tenant Security
 
-Every subsequent request (uploading a file, listing files, executing a chat prompt) mandates the inclusion of standard authorization headers (`Authorization: Bearer <token>`).
+This is the most critical security feature. Even though all users share the same Pinecone index, **no user can ever access another user's documents**.
 
-## 2. Authorization (Role Based Access Control)
+### How it works:
 
-- **Dependency**: `FastAPI Depends(get_current_user)`
-
-The backend does not support globally accessible chat interactions. The frontend is structurally incapable of routing users to the `Dashboard` unless a token resides in `localStorage`.
-
-Once inside, `get_current_user` decodes the token, queries the active `User` model, and binds the request flow.
-
-## 3. Data Isolation using Metadata Filtering
-
-When documents are processed via LangChain and upserted to Pinecone:
+**On Upload** — Every document chunk is tagged with the uploader's ID:
 
 ```python
-vector_store.process_and_store_text(
-    text=extracted_text,
-    user_id=current_user.id,
-    filename=file.filename
+metadatas = [
+    {"user_id": current_user.id, "filename": file.filename, "chunk_index": i}
+    for i in range(len(chunks))
+]
+```
+
+**On Chat** — Every search query is filtered by the current user's ID:
+
+```python
+retriever = vectorstore.as_retriever(
+    search_kwargs={
+        "k": 5,
+        "filter": {"user_id": user_id}  # Only this user's chunks
+    }
 )
 ```
 
-Pinecone's storage mechanism forcibly injects `{"user_id": current_user.id}` into the vector record metadata.
+**Result**: Pinecone physically excludes all vectors that don't belong to the authenticated user. It is architecturally impossible for User A to retrieve User B's document content.
 
-When the user later types "Summarize my files" in chat:
+## 3. Secret Management
 
-```python
-query_response = index.query(
-    vector=embedding,
-    top_k=5,
-    include_metadata=True,
-    filter={"user_id": user_id} # Extremely critical isolation tier
-)
+| Secret             | Storage                           | Notes                        |
+| ------------------ | --------------------------------- | ---------------------------- |
+| `GEMINI_API_KEY`   | `.env` file                       | Never committed to Git       |
+| `PINECONE_API_KEY` | `.env` file                       | Never committed to Git       |
+| `SECRET_KEY`       | `.env` file                       | Used for JWT signing         |
+| User passwords     | SQLite (`hashed_password` column) | bcrypt hash, never plaintext |
+
+### .gitignore Protection
+
+The `.gitignore` file explicitly excludes:
+
+```
+.env
+.env.*
+*.db
 ```
 
-Because Pinecone strictly limits the search space via the `filter` argument, it becomes cryptographically and mathematically impossible for User A to retrieve or chat about User B's documents, regardless of whether similarities overlap.
+This ensures no secrets or local database data are ever pushed to GitHub.
+
+## 4. Frontend Auth Guards
+
+- The React Router redirects unauthenticated users to `/login`
+- Protected routes check for `token` in state before rendering
+- Logout clears `localStorage` and resets the token state
+- No sensitive data (passwords, API keys) is ever exposed to the frontend

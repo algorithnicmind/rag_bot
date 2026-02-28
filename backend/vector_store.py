@@ -21,7 +21,7 @@ def get_vector_store():
 
     # Set up Gemini Embeddings
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001", 
+        model="models/text-embedding-004", 
         google_api_key=gemini_api_key
     )
     

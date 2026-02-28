@@ -45,9 +45,20 @@ export default function Chat({ token }) {
 
         } catch (error) {
             console.error(error);
+            let errorMsg = "Sorry, I encountered an error trying to search your documents. Please try again.";
+            
+            const detail = error.response?.data?.detail || "";
+            if (detail.includes("429") || detail.includes("quota") || detail.includes("Quota")) {
+                errorMsg = "⏳ The AI service is temporarily rate-limited (free-tier daily quota exceeded). Please try again in a few hours.";
+            } else if (detail.includes("404") || detail.includes("not found")) {
+                errorMsg = "⚠️ The AI model could not be found. Please check your API configuration.";
+            } else if (error.code === "ERR_NETWORK") {
+                errorMsg = "🔌 Cannot connect to the backend server. Please make sure it is running.";
+            }
+            
             setMessages(prev => [...prev, { 
                 role: 'assistant', 
-                text: "Sorry, I encountered an error trying to search your documents. " + (error.response?.data?.detail || "")
+                text: errorMsg
             }]);
         } finally {
             setLoading(false);

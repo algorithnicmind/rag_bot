@@ -178,6 +178,18 @@ Open a **new terminal** (keep the backend running):
 ```bash
 cd frontend
 npm install
+```
+
+> [!IMPORTANT]
+> Create a `.env` file in the `frontend/` directory to connect to your backend:
+
+```env
+VITE_API_URL=http://127.0.0.1:8000
+```
+
+**Start the React app:**
+
+```bash
 npm run dev
 ```
 
@@ -215,16 +227,24 @@ rag_bot/
 │   ├── vector_store.py        # Pinecone + Gemini embeddings
 │   ├── rag_engine.py          # LangChain RAG pipeline
 │   ├── requirements.txt       # Python dependencies
-│   └── .env                   # API keys (not committed)
+│   ├── .env                   # API keys (not committed)
+│   ├── pytest.ini             # Pytest configuration
+│   └── test/
+│       ├── conftest.py        # Pytest fixtures & mock DB
+│       ├── test_auth.py       # Auth unit tests
+│       ├── test_documents.py  # File upload / isolation tests
+│       └── test_chat.py       # RAG endpoint tests
 │
 ├── frontend/
 │   ├── src/
+│   │   ├── api.js             # Centralized Axios & JWT interceptor
 │   │   ├── App.jsx            # Root component & routing
 │   │   ├── index.css          # Global dark theme styles
 │   │   └── components/
 │   │       ├── Login.jsx      # Auth forms
 │   │       ├── Upload.jsx     # Document upload UI
 │   │       └── Chat.jsx       # AI chat interface
+│   ├── .env                   # API URL config (not committed)
 │   └── package.json
 │
 ├── docs/                      # Detailed documentation
@@ -258,6 +278,19 @@ Detailed documentation is available in the [`docs/`](./docs) folder:
 
 ---
 
+## 🧪 Testing
+
+The backend includes a comprehensive 29-test suite powered by **pytest**. Tests run on an isolated in-memory SQLite database and use mocked Google/Pinecone API calls so they are entirely free to run.
+
+To execute the test suite:
+
+```bash
+cd backend
+python -m pytest test/ -v
+```
+
+---
+
 ## 🔒 Security
 
 > [!CAUTION]
@@ -278,9 +311,10 @@ Detailed documentation is available in the [`docs/`](./docs) folder:
 | **Backend**       | Python, FastAPI, Uvicorn, SQLAlchemy              |
 | **AI/ML**         | Google Gemini 2.0 Flash, Gemini Embedding 001     |
 | **Vector DB**     | Pinecone (Serverless)                             |
-| **Database**      | SQLite                                            |
+| **Database**      | SQLite (Production) / SQLite In-Memory (Tests)    |
 | **Auth**          | JWT (python-jose), bcrypt (passlib)               |
 | **RAG Framework** | LangChain                                         |
+| **Testing**       | Pytest, HTTPX                                     |
 
 ---
 

@@ -28,6 +28,7 @@ error-v2.txt
 venv/
 env/
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *$py.class
 *.so

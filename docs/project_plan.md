@@ -17,6 +17,7 @@ A full-stack **Retrieval-Augmented Generation (RAG)** web application that allow
 | **LLM**                 | Google Gemini `gemini-2.0-flash`                       |
 | **Document Processing** | PyPDF, python-docx                                     |
 | **RAG Framework**       | LangChain                                              |
+| **Testing**             | Pytest, HTTPX                                          |
 
 ## Implementation Steps
 
@@ -27,7 +28,8 @@ A full-stack **Retrieval-Augmented Generation (RAG)** web application that allow
 5. **Step 5: Chat Interface** — Build chat UI with markdown rendering, implement retrieval with user-scoped filtering, and generate LLM responses via Gemini.
 6. **Step 6: Error Handling** — Graceful user-facing error messages for rate limits, network issues, and model errors.
 7. **Step 7: Documentation** — Comprehensive docs, README, and `.gitignore` for a clean, production-ready repository.
+8. **Step 8: Testing & Refinement** — Comprehensive 29-test backend test suite via `pytest`, plus architectural improvements (centralized frontend `.env` config and `api.js` interceptor).
 
 ## Project Status: ✅ Complete
 
-All 7 steps have been implemented and verified.
+All 8 steps have been implemented, tested, and verified.

@@ -14,6 +14,7 @@
 *.sqlite
 *.sqlite3
 ragbot.db
+test_ragbot.db
 
 # User Uploads
 uploads/

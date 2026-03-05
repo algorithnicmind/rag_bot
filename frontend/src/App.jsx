@@ -55,7 +55,7 @@ function App() {
                       </button>
                     </div>
                     
-                    {activeTab === 'upload' ? <Upload token={token} /> : <Chat token={token} />}
+                    {activeTab === 'upload' ? <Upload /> : <Chat />}
                   </div>
                 ) : <Navigate to="/login" />
               } 

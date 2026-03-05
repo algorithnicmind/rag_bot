@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import API from '../api';
 import { User, Lock, Mail } from 'lucide-react';
 
 export default function Login({ setToken }) {
@@ -19,11 +19,11 @@ export default function Login({ setToken }) {
                 params.append('username', formData.username);
                 params.append('password', formData.password);
 
-                const res = await axios.post('http://127.0.0.1:8000/auth/login', params);
+                const res = await API.post('/auth/login', params);
                 setToken(res.data.access_token);
                 localStorage.setItem('token', res.data.access_token);
             } else {
-                await axios.post('http://127.0.0.1:8000/auth/register', {
+                await API.post('/auth/register', {
                     username: formData.username,
                     email: formData.email,
                     password: formData.password

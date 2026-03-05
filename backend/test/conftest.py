@@ -14,7 +14,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Ensure backend modules are importable
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from database import Base, get_db
 from main import app

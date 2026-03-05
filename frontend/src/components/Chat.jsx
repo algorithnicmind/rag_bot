@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import axios from 'axios';
+import API from '../api';
 import { Send, User, Bot, Loader2, Database } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-export default function Chat({ token }) {
+export default function Chat() {
     const [messages, setMessages] = useState([
         { role: 'assistant', text: "Hello! I've read your uploaded documents. What would you like to know?", sources: [] }
     ]);
@@ -30,11 +30,8 @@ export default function Chat({ token }) {
         setLoading(true);
 
         try {
-            const res = await axios.post('http://127.0.0.1:8000/chat', 
-                { query: userMsg },
-                { 
-                    headers: { Authorization: `Bearer ${token}` }
-                }
+            const res = await API.post('/chat', 
+                { query: userMsg }
             );
 
             setMessages(prev => [...prev, { 

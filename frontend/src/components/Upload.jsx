@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { UploadCloud, FileText, CheckCircle, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import API from '../api';
 
-export default function Upload({ token }) {
+export default function Upload() {
     const [file, setFile] = useState(null);
     const [status, setStatus] = useState('idle'); // idle, uploading, success, error
     const [message, setMessage] = useState('');
@@ -20,10 +20,9 @@ export default function Upload({ token }) {
         formData.append('file', file);
 
         try {
-            await axios.post('http://127.0.0.1:8000/documents/upload', formData, {
+            await API.post('/documents/upload', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
-                    Authorization: `Bearer ${token}`
                 }
             });
             setStatus('success');

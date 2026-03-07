@@ -2,7 +2,6 @@ import os
 import time
 import logging
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from pinecone import Pinecone, ServerlessSpec
 from langchain_pinecone import PineconeVectorStore
 from dotenv import load_dotenv
@@ -11,8 +10,6 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-index_name = "rag-bot-index-v3"
-
 # --- Rate Limit Configuration ---
 BATCH_SIZE = 5            # Number of chunks to embed per API call
 DELAY_BETWEEN_BATCHES = 2 # Seconds to wait between batches
@@ -20,27 +17,41 @@ MAX_RETRIES = 5           # Max retries on rate-limit (429) errors
 INITIAL_BACKOFF = 2       # Initial backoff delay in seconds
 
 
-def get_vector_store():
-    pinecone_api_key = os.getenv("PINECONE_API_KEY")
+def get_embedding_model_and_index():
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    groq_api_key = os.getenv("GROQ_API_KEY")
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     
-    if not pinecone_api_key or not gemini_api_key:
-        raise ValueError("Missing API Keys in .env file.")
+    if openai_api_key:
+        from langchain_openai import OpenAIEmbeddings
+        return OpenAIEmbeddings(api_key=openai_api_key), "rag-bot-index-openai", 1536
+    elif groq_api_key:
+        from langchain_huggingface import HuggingFaceEmbeddings
+        # Uses a local embedding model, which is completely free and has no rate limits!
+        return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2"), "rag-bot-index-hf", 384
+    elif gemini_api_key:
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        return GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", google_api_key=gemini_api_key), "rag-bot-index-v3", 3072
+    else:
+        raise ValueError("Missing API Keys in .env file. Provide OPENAI_API_KEY, GROQ_API_KEY, or GEMINI_API_KEY.")
+
+
+def get_vector_store():
+    pinecone_api_key = os.getenv("PINECONE_API_KEY")
+    if not pinecone_api_key:
+        raise ValueError("Missing PINECONE_API_KEY in .env file.")
 
     # Initialize Pinecone
     pc = Pinecone(api_key=pinecone_api_key)
 
-    # Set up Gemini Embeddings
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/gemini-embedding-001", 
-        google_api_key=gemini_api_key
-    )
+    # Set up Embeddings and Index dynamically
+    embeddings, index_name, dimension = get_embedding_model_and_index()
     
     # Check if index exists, if not, create it
     if index_name not in pc.list_indexes().names():
         pc.create_index(
             name=index_name,
-            dimension=3072, # gemini-embedding-001 produces 3072-dim vectors
+            dimension=dimension,
             metric="cosine",
             spec=ServerlessSpec(
                 cloud="aws",
@@ -73,13 +84,12 @@ def _add_texts_with_retry(vectorstore, texts: list, metadatas: list):
     # If we exhausted all retries
     raise RuntimeError(
         f"Failed to embed text after {MAX_RETRIES} retries due to API rate limits. "
-        "Please wait a few minutes and try again, or upgrade your Gemini API plan."
+        "Please wait a few minutes and try again, or upgrade your API plan."
     )
 
 
 def process_and_store_text(text: str, user_id: int, filename: str):
-    """Chunks text and uploads it to Pinecone with user_id metadata, 
-    using batched requests to avoid hitting Gemini API rate limits."""
+    """Chunks text and uploads it to Pinecone with user_id metadata."""
     if not text.strip():
         return
         
@@ -113,3 +123,4 @@ def process_and_store_text(text: str, user_id: int, filename: str):
         # Pause between batches to stay under rate limits
         if i + BATCH_SIZE < len(chunks):
             time.sleep(DELAY_BETWEEN_BATCHES)
+

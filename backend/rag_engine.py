@@ -1,9 +1,28 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from vector_store import get_vector_store
 import os
+
+
+def get_llm():
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    
+    if openai_api_key:
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(model="gpt-4o-mini", temperature=0.3, api_key=openai_api_key)
+    elif groq_api_key:
+        from langchain_groq import ChatGroq
+        # You can use any Groq model, here using super fast LLaMA-3 8b
+        return ChatGroq(model="llama3-8b-8192", temperature=0.3, api_key=groq_api_key)
+    elif gemini_api_key:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        return ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.3, max_retries=2, google_api_key=gemini_api_key)
+    else:
+         raise ValueError("Missing API Keys in .env file. Provide OPENAI_API_KEY, GROQ_API_KEY, or GEMINI_API_KEY.")
+
 
 def generate_rag_response(query: str, user_id: int):
     # 1. Access the specific user's vector embeddings
@@ -17,14 +36,8 @@ def generate_rag_response(query: str, user_id: int):
         }
     )
 
-    # 2. Prepare the Google Gemini LLM
-    gemini_api_key = os.getenv("GEMINI_API_KEY")
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash", # Fast and capable model
-        temperature=0.3, # Low temperature for accurate, non-hallucinated answers
-        max_retries=2,
-        google_api_key=gemini_api_key
-    )
+    # 2. Get the LLM based on provided API keys
+    llm = get_llm()
 
     # 3. Create the prompt instruction for the LLM
     system_prompt = (

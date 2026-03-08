@@ -90,6 +90,12 @@ async def upload_document(
     # 2. Vectorize and store 'extracted_text' in Pinecone in the background!
     # By shifting this to a BackgroundTask, a large 100-page PDF will return to the UI instantly
     # while the server processes the vectors seamlessly behind the scenes.
+    if not os.getenv("PINECONE_API_KEY"):
+         raise HTTPException(status_code=500, detail="Pinecone API Key is missing in your .env file.")
+         
+    if not (os.getenv("OPENAI_API_KEY") or os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY")):
+         raise HTTPException(status_code=500, detail="An LLM API Key (Groq, OpenAI, or Gemini) is missing in your .env file.")
+
     try:
         if extracted_text and extracted_text.strip():
             background_tasks.add_task(
@@ -98,8 +104,6 @@ async def upload_document(
                 user_id=current_user.id, 
                 filename=file.filename
             )
-    except ValueError as ve:
-        raise HTTPException(status_code=500, detail="API Keys are missing. Please add them to your .env file.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to queue vectorization: {str(e)}")
 

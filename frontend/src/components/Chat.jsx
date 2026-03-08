@@ -47,6 +47,8 @@ export default function Chat() {
             const detail = error.response?.data?.detail || "";
             if (detail.includes("429") || detail.includes("quota") || detail.includes("Quota")) {
                 errorMsg = "⏳ The AI service is temporarily rate-limited (free-tier daily quota exceeded). Please try again in a few hours.";
+            } else if (detail.includes("invalid_api_key") || detail.includes("Invalid API Key")) {
+                errorMsg = "🔑 Your current AI API Key is invalid. Please update it in your backend .env file.";
             } else if (detail.includes("404") || detail.includes("not found")) {
                 errorMsg = "⚠️ The AI model could not be found. Please check your API configuration.";
             } else if (error.code === "ERR_NETWORK") {

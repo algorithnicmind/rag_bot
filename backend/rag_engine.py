@@ -21,8 +21,8 @@ def get_llm():
         _llm_instance = ChatOpenAI(model="gpt-4o-mini", temperature=0.3, api_key=openai_api_key)
     elif groq_api_key:
         from langchain_groq import ChatGroq
-        # You can use any Groq model, here using super fast LLaMA-3 8b
-        _llm_instance = ChatGroq(model="llama3-8b-8192", temperature=0.3, api_key=groq_api_key)
+        # Using the reliable Llama 3.1 8B instant model
+        _llm_instance = ChatGroq(model="llama-3.1-8b-instant", temperature=0.3, api_key=groq_api_key)
     elif gemini_api_key:
         from langchain_google_genai import ChatGoogleGenerativeAI
         _llm_instance = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.3, max_retries=2, google_api_key=gemini_api_key)

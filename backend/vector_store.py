@@ -11,7 +11,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # --- Rate Limit Configuration ---
-BATCH_SIZE = 50           # Increased batch size
+BATCH_SIZE = 200          # Maximize batch size (Pinecone limit is 1000) to decrease network latency
 DELAY_BETWEEN_BATCHES = 0 # Reduced delay for local inference speed
 MAX_RETRIES = 5           # Max retries on rate-limit (429) errors
 INITIAL_BACKOFF = 2       # Initial backoff delay in seconds

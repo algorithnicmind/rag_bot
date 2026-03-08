@@ -97,7 +97,7 @@ Content-Type: multipart/form-data
 
 1. Text is extracted from the file
 2. Text is chunked into ~1000 character segments
-3. Each chunk is embedded using `gemini-embedding-001` (3072 dimensions)
+3. Each chunk is embedded using `all-MiniLM-L6-v2` (384 dimensions)
 4. Vectors are stored in Pinecone with `user_id` metadata
 5. File metadata is saved to SQLite
 6. A backup copy is saved to `backend/uploads/`
@@ -157,7 +157,7 @@ Authorization: Bearer <token>
 1. Query is embedded using the same model
 2. Pinecone retrieves top 5 most relevant chunks (filtered by `user_id`)
 3. Chunks are assembled as context for the LLM
-4. `gemini-2.0-flash` generates an answer strictly from the context
+4. `llama3-8b-8192` generates an answer strictly from the context
 5. Source filenames are extracted and returned
 
 **Response** `200 OK`:

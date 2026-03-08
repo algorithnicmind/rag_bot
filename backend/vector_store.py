@@ -11,32 +11,50 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # --- Rate Limit Configuration ---
-BATCH_SIZE = 5            # Number of chunks to embed per API call
-DELAY_BETWEEN_BATCHES = 2 # Seconds to wait between batches
+BATCH_SIZE = 50           # Increased batch size
+DELAY_BETWEEN_BATCHES = 0 # Reduced delay for local inference speed
 MAX_RETRIES = 5           # Max retries on rate-limit (429) errors
 INITIAL_BACKOFF = 2       # Initial backoff delay in seconds
 
+# --- Global Caches to Speed up Request Times ---
+_embeddings_instance = None
+_index_name = None
+_dimension = None
+_vectorstore_instance = None
 
 def get_embedding_model_and_index():
+    global _embeddings_instance, _index_name, _dimension
+    if _embeddings_instance is not None:
+        return _embeddings_instance, _index_name, _dimension
+
     openai_api_key = os.getenv("OPENAI_API_KEY")
     groq_api_key = os.getenv("GROQ_API_KEY")
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     
     if openai_api_key:
         from langchain_openai import OpenAIEmbeddings
-        return OpenAIEmbeddings(api_key=openai_api_key), "rag-bot-index-openai", 1536
+        _embeddings_instance = OpenAIEmbeddings(api_key=openai_api_key)
+        _index_name, _dimension = "rag-bot-index-openai", 1536
     elif groq_api_key:
         from langchain_huggingface import HuggingFaceEmbeddings
-        # Uses a local embedding model, which is completely free and has no rate limits!
-        return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2"), "rag-bot-index-hf", 384
+        # Uses a local embedding model, cached once in memory
+        _embeddings_instance = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        _index_name, _dimension = "rag-bot-index-hf", 384
     elif gemini_api_key:
         from langchain_google_genai import GoogleGenerativeAIEmbeddings
-        return GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", google_api_key=gemini_api_key), "rag-bot-index-v3", 3072
+        _embeddings_instance = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", google_api_key=gemini_api_key)
+        _index_name, _dimension = "rag-bot-index-v3", 3072
     else:
         raise ValueError("Missing API Keys in .env file. Provide OPENAI_API_KEY, GROQ_API_KEY, or GEMINI_API_KEY.")
+    
+    return _embeddings_instance, _index_name, _dimension
 
 
 def get_vector_store():
+    global _vectorstore_instance
+    if _vectorstore_instance is not None:
+        return _vectorstore_instance
+
     pinecone_api_key = os.getenv("PINECONE_API_KEY")
     if not pinecone_api_key:
         raise ValueError("Missing PINECONE_API_KEY in .env file.")
@@ -59,7 +77,8 @@ def get_vector_store():
             )
         )
     
-    return PineconeVectorStore.from_existing_index(index_name, embeddings)
+    _vectorstore_instance = PineconeVectorStore.from_existing_index(index_name, embeddings)
+    return _vectorstore_instance
 
 
 def _add_texts_with_retry(vectorstore, texts: list, metadatas: list):
@@ -121,6 +140,6 @@ def process_and_store_text(text: str, user_id: int, filename: str):
         _add_texts_with_retry(vectorstore, batch_texts, batch_metas)
         
         # Pause between batches to stay under rate limits
-        if i + BATCH_SIZE < len(chunks):
+        if i + BATCH_SIZE < len(chunks) and DELAY_BETWEEN_BATCHES > 0:
             time.sleep(DELAY_BETWEEN_BATCHES)
 

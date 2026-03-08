@@ -5,23 +5,31 @@ from vector_store import get_vector_store
 import os
 
 
+_llm_instance = None
+
 def get_llm():
+    global _llm_instance
+    if _llm_instance is not None:
+        return _llm_instance
+
     openai_api_key = os.getenv("OPENAI_API_KEY")
     groq_api_key = os.getenv("GROQ_API_KEY")
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     
     if openai_api_key:
         from langchain_openai import ChatOpenAI
-        return ChatOpenAI(model="gpt-4o-mini", temperature=0.3, api_key=openai_api_key)
+        _llm_instance = ChatOpenAI(model="gpt-4o-mini", temperature=0.3, api_key=openai_api_key)
     elif groq_api_key:
         from langchain_groq import ChatGroq
         # You can use any Groq model, here using super fast LLaMA-3 8b
-        return ChatGroq(model="llama3-8b-8192", temperature=0.3, api_key=groq_api_key)
+        _llm_instance = ChatGroq(model="llama3-8b-8192", temperature=0.3, api_key=groq_api_key)
     elif gemini_api_key:
         from langchain_google_genai import ChatGoogleGenerativeAI
-        return ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.3, max_retries=2, google_api_key=gemini_api_key)
+        _llm_instance = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.3, max_retries=2, google_api_key=gemini_api_key)
     else:
          raise ValueError("Missing API Keys in .env file. Provide OPENAI_API_KEY, GROQ_API_KEY, or GEMINI_API_KEY.")
+    
+    return _llm_instance
 
 
 def generate_rag_response(query: str, user_id: int):

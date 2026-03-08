@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta, datetime
@@ -72,6 +72,7 @@ def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
 
 @app.post("/documents/upload", response_model=schemas.DocumentResponse)
 async def upload_document(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
@@ -86,17 +87,21 @@ async def upload_document(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
     
-    # 2. Vectorize and store 'extracted_text' in Pinecone
+    # 2. Vectorize and store 'extracted_text' in Pinecone in the background!
+    # By shifting this to a BackgroundTask, a large 100-page PDF will return to the UI instantly
+    # while the server processes the vectors seamlessly behind the scenes.
     try:
-        vector_store.process_and_store_text(
-            text=extracted_text, 
-            user_id=current_user.id, 
-            filename=file.filename
-        )
+        if extracted_text and extracted_text.strip():
+            background_tasks.add_task(
+                vector_store.process_and_store_text,
+                text=extracted_text, 
+                user_id=current_user.id, 
+                filename=file.filename
+            )
     except ValueError as ve:
         raise HTTPException(status_code=500, detail="API Keys are missing. Please add them to your .env file.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to vectorize document: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to queue vectorization: {str(e)}")
 
     # 3. Save file to disk
     file_location = f"uploads/{current_user.id}_{file.filename}"

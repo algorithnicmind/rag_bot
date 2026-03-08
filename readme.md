@@ -10,7 +10,8 @@
 [![Vite](https://img.shields.io/badge/Vite-6.2-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev)
 [![LangChain](https://img.shields.io/badge/LangChain-0.2-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain.com)
 [![Pinecone](https://img.shields.io/badge/Pinecone-Vector_DB-000000?style=for-the-badge)](https://pinecone.io)
-[![Gemini](https://img.shields.io/badge/Google_Gemini-AI-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev)
+[![Groq](https://img.shields.io/badge/Groq-AI-f55036?style=for-the-badge)](https://groq.com)
+[![HuggingFace](https://img.shields.io/badge/HuggingFace-Embeddings-F5C018?style=for-the-badge)](https://huggingface.co)
 
 **Upload your documents • Ask questions • Get AI-powered answers with source citations**
 
@@ -56,7 +57,7 @@ Upload a PDF, Word document, or text file, and then ask questions like:
 
 ### 🧠 RAG-Powered AI Chat
 
-- Powered by Google Gemini 2.0 Flash
+- Powered by Groq LLaMA-3 (Fast Inference)
 - Context-aware answers from YOUR docs only
 - Source citations with every response
 - Markdown-rendered AI responses
@@ -87,14 +88,14 @@ Upload a PDF, Word document, or text file, and then ask questions like:
                                │          │
                           ┌────▼───┐  ┌───▼───────────┐
                           │ SQLite │  │ Pinecone Cloud │
-                          │ Users  │  │ Vectors (3072d)│
+                          │ Users  │  │ Vectors (384d) │
                           │ Docs   │  │ User-scoped    │
                           └────────┘  └───┬───────────┘
                                           │
-                                    ┌─────▼──────────┐
-                                    │ Google Gemini   │
+                                    ┌─────▼───────────┐
+                                    │ Groq & HF APIs  │
                                     │ Embedding + LLM │
-                                    └────────────────┘
+                                    └─────────────────┘
 ```
 
 ---
@@ -146,15 +147,15 @@ pip install -r requirements.txt
 > Create a `.env` file in the `backend/` directory with your API keys:
 
 ```env
-GEMINI_API_KEY="your-gemini-api-key"
+GROQ_API_KEY="your-groq-api-key"
 PINECONE_API_KEY="your-pinecone-api-key"
 SECRET_KEY="any-random-secret-string"
 ```
 
-| Key                | Where to get it                                        |
-| ------------------ | ------------------------------------------------------ |
-| `GEMINI_API_KEY`   | [Google AI Studio](https://aistudio.google.com/apikey) |
-| `PINECONE_API_KEY` | [Pinecone Console](https://app.pinecone.io)            |
+| Key                | Where to get it                               |
+| ------------------ | --------------------------------------------- |
+| `GROQ_API_KEY`     | [Groq Console](https://console.groq.com/keys) |
+| `PINECONE_API_KEY` | [Pinecone Console](https://app.pinecone.io)   |
 
 **Start the server:**
 
@@ -224,7 +225,7 @@ rag_bot/
 │   ├── schemas.py             # Pydantic request/response schemas
 │   ├── database.py            # SQLite connection setup
 │   ├── document_processor.py  # PDF/DOCX/TXT text extraction
-│   ├── vector_store.py        # Pinecone + Gemini embeddings
+│   ├── vector_store.py        # Pinecone + HuggingFace embeddings
 │   ├── rag_engine.py          # LangChain RAG pipeline
 │   ├── requirements.txt       # Python dependencies
 │   ├── .env                   # API keys (not committed)
@@ -309,7 +310,7 @@ python -m pytest test/ -v
 | ----------------- | ------------------------------------------------- |
 | **Frontend**      | React 19, Vite, React Router, Axios, Lucide Icons |
 | **Backend**       | Python, FastAPI, Uvicorn, SQLAlchemy              |
-| **AI/ML**         | Google Gemini 2.0 Flash, Gemini Embedding 001     |
+| **AI/ML**         | Groq Llama-3 8B, HuggingFace all-MiniLM-L6-v2     |
 | **Vector DB**     | Pinecone (Serverless)                             |
 | **Database**      | SQLite (Production) / SQLite In-Memory (Tests)    |
 | **Auth**          | JWT (python-jose), bcrypt (passlib)               |

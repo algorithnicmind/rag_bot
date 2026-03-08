@@ -39,14 +39,14 @@ pip install -r requirements.txt
 Create a `.env` file inside the `backend/` folder:
 
 ```env
-GEMINI_API_KEY="your-gemini-api-key"
+GROQ_API_KEY="your-groq-api-key"
 PINECONE_API_KEY="your-pinecone-api-key"
 SECRET_KEY="any-random-secret-string-for-jwt"
 ```
 
 **How to get API keys:**
 
-- **Gemini**: Go to [Google AI Studio](https://aistudio.google.com/apikey) → Create API Key
+- **Groq**: Go to [Groq Console](https://console.groq.com/keys) → Create API Key
 - **Pinecone**: Go to [Pinecone Console](https://app.pinecone.io) → API Keys
 
 ### 4. Start the Backend
@@ -77,9 +77,9 @@ Go to **http://localhost:5173** in your browser!
 
 ### ❌ "429 Quota Exceeded" Error
 
-**What it means**: Your Gemini API free-tier daily limit has been reached.
+**What it means**: Your Groq API free-tier daily limit has been reached.
 
-**Solution**: Wait for the quota to reset (resets daily at midnight Pacific Time, ~1:30 PM IST). Alternatively, upgrade to a paid plan in Google AI Studio.
+**Solution**: Wait for the quota to reset. Or consider using OpenAI if needed.
 
 ### ❌ "ERR_CONNECTION_REFUSED" in Browser
 
@@ -103,7 +103,7 @@ Go to **http://localhost:5173** in your browser!
 
 **What it means**: The embedding API call failed (usually quota or network issue).
 
-**Solution**: Check the backend terminal for the specific error. If it's a 429, wait for quota reset. If it's a different error, verify your `GEMINI_API_KEY` in `.env`.
+**Solution**: Check the backend terminal for the specific error. If it's a 429, wait for quota reset. If it's a different error, verify your `GROQ_API_KEY` in `.env`.
 
 ### ❌ Import Errors on Backend Startup
 
@@ -139,12 +139,12 @@ pip install bcrypt==4.0.1
 
 ## Key Configuration
 
-| Setting           | File              | Current Value                 |
-| ----------------- | ----------------- | ----------------------------- |
-| Embedding Model   | `vector_store.py` | `models/gemini-embedding-001` |
-| LLM Model         | `rag_engine.py`   | `gemini-2.0-flash`            |
-| Vector Dimensions | `vector_store.py` | `3072`                        |
-| Pinecone Index    | `vector_store.py` | `rag-bot-index-v3`            |
-| Chunk Size        | `vector_store.py` | `1000` chars, `200` overlap   |
-| Top-K Results     | `rag_engine.py`   | `5`                           |
-| JWT Expiry        | `auth.py`         | `30` minutes                  |
+| Setting           | File              | Current Value               |
+| ----------------- | ----------------- | --------------------------- |
+| Embedding Model   | `vector_store.py` | `all-MiniLM-L6-v2`          |
+| LLM Model         | `rag_engine.py`   | `llama3-8b-8192`            |
+| Vector Dimensions | `vector_store.py` | `384`                       |
+| Pinecone Index    | `vector_store.py` | `rag-bot-index-hf`          |
+| Chunk Size        | `vector_store.py` | `1000` chars, `200` overlap |
+| Top-K Results     | `rag_engine.py`   | `5`                         |
+| JWT Expiry        | `auth.py`         | `30` minutes                |

@@ -52,7 +52,7 @@ retriever = vectorstore.as_retriever(
 
 | Secret             | Storage                           | Notes                        |
 | ------------------ | --------------------------------- | ---------------------------- |
-| `GEMINI_API_KEY`   | `.env` file                       | Never committed to Git       |
+| `GROQ_API_KEY`     | `.env` file                       | Never committed to Git       |
 | `PINECONE_API_KEY` | `.env` file                       | Never committed to Git       |
 | `SECRET_KEY`       | `.env` file                       | Used for JWT signing         |
 | User passwords     | SQLite (`hashed_password` column) | bcrypt hash, never plaintext |

@@ -44,8 +44,8 @@ CREATE TABLE documents (
 
 ## 2. Pinecone Vector Database
 
-**Index Name**: `rag-bot-index-v3`  
-**Dimension**: `3072` (matches `gemini-embedding-001` output)  
+**Index Name**: `rag-bot-index-hf`  
+**Dimension**: `384` (matches `all-MiniLM-L6-v2` output)  
 **Metric**: Cosine Similarity  
 **Cloud**: AWS `us-east-1` (Serverless)
 
@@ -54,7 +54,7 @@ CREATE TABLE documents (
 ```json
 {
     "id": "auto-generated-uuid",
-    "values": [0.032, -0.015, 0.089, ...],  // 3072 floats
+    "values": [0.032, -0.015, 0.089, ...],  // 384 floats
     "metadata": {
         "text": "The actual text chunk from the document...",
         "user_id": 1,
